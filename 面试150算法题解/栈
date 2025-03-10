@@ -1,0 +1,41 @@
+
+
+第二题：
+```C++
+
+class Solution {
+public:
+    string simplifyPath(string path) {
+        vector<string> pathVector;
+        int i = 0;
+        while (i < path.size()) {
+            while (i < path.size() && path[i] == '/')
+                ++i;
+            if (i == path.size())
+                break;
+            int j = i;
+            while (j < path.size() && path[j] != '/')
+                j++;
+            string str = path.substr(i, j - i);
+            if (str != "."){
+                if (str == ".." && !pathVector.empty()) {
+                    pathVector.pop_back();
+                }
+                else if(str != ".."){
+                    pathVector.push_back(str);
+                }
+            }
+            i = j;
+        }
+
+        string ss;
+        for (int i = 0; i < pathVector.size(); i++) {
+            ss = ss + '/' + pathVector[i];
+        }
+        if (ss == "")
+            return "/";
+        return ss;
+    }
+};
+
+```
