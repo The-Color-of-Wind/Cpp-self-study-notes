@@ -1,0 +1,267 @@
+侯捷c++笔记（上）
+complex：
+1、const修饰函数
+			double real() const { return re; }  
+            有const的函数,说明该函数不会改变数据内容（必须加）
+			如果不加，后续创建常量复数 const complex c1(2,1);
+			无法调用无 const 的函数     c1.real();   报错
+
+2、	重载
+            重载（可重名，但编译器里实际上不重名）
+	        两个real函数编译后的实际名称可能是：
+	        ？real@Complex@@QBENXZ
+	        ？real@Complex@@QAENABN@Z
+
+3、构造函数
+        complex(double r = 0, double i = 0)
+			: re(r), im(i)  //初始列阶段
+		{
+			//re = r; im = i; //赋值，效率差
+		}
+
+3、传参
+    传参时，尽量都传引用，传引用 时间效率 比 传值 高
+    如：complex& x
+    不希望改变值则： const complex& x
+
+    返回值：如果可以的话，也传引用
+    不可以：（个人理解不严谨）变量是函数内的定义的变量，会随着函数结束消失的变量
+
+4、相同的class的各个objects互为friends（友元）
+    class complex
+	    {
+	    public:
+		    complex(double r = 0, double i = 0)
+		    	: re(r), im(i) 
+		    {   }
+		
+            int func(const complex& param)
+            {
+                return param.re + param.im;
+            }
+
+	    private:
+		    double re, im;
+
+            friend complex& __doap1(complex*, const complex&);//友元
+	    };
+    //友元可以直接调用私有
+    inline complex&
+    __doap1 (complex* ths, const complex& r){
+        ths->re += r.re;
+        ths->im += r.im;
+        return *ths;
+    }
+    //相同类的各个对象
+    {
+        complex c1(2,1);
+        complex c2;
+
+        c2.func(c1); //可以
+    }
+
+5、操作符重载（c++里操作符就是一种函数）
+    1、成员函数
+    inline complex&
+    __doap(complex* ths, const complex& r){
+        ths->re += r.re;
+        ths->im += r.im;
+        return *ths;
+    }
+    inline complex&
+    operacomplex::tor += (const complex& r)//传参时，默认有一个this指针，指向该调用对象
+    {
+        return __doap1(this, r);
+    }
+
+
+    2、非成员函数(无this) 所以只能用real()、imag()函数调用数据
+    inline complex
+    operator + (const complex& x, const complex& y)
+    {
+        return complex(real (x) + real (y),  imag(x)+ imag(y));
+    }
+
+    该complex函数绝不可 return by reference， 因为它们返回的必定是个local object
+    （起初没有分配空间，所以无法用引用接收）
+
+
+
+    3、<< 重载只能写成成员函数的形式，因为cout是标准库早就写好的。
+    
+    ostream&
+    operator << (ostream& os, const complex& x)  //os 不能const，因为os<< 就已经对os更改了
+    {
+        return os << '(' << real (x) << ',' << imag (x) << ')';
+
+    }
+
+    {
+        complex c1(2,1);
+        cout << conj (c1);
+        cout << c1 << conj(c1);
+    }
+
+6、temp object(临时对象)  
+    用法：typename();
+    特点：作用域只在一条语句中
+
+
+取值运算符是一个一元运算符  *p是一个运算
+
+
+string：
+    1、如果类里带指针，则不能用编译器自带的一套特殊函数，必须自己写这些函数
+
+
+    2、new：先分配memory，再调用ctor（构造函数）
+        String* ps = new String("Hello");
+    编译器转化为：
+        String* ps;
+      1 void* mem = operator new(sizeof(String));   //分配内存，operator new是c++分配内存的函数名，内部调用malloc(n)
+      2 ps = static_cast<String*>(mem);         //转型
+      3 PS->String::String("Hello");    //构造函数
+
+    3、delete：先调用dtor（析构函数），再释放memory
+        delete ps;
+    编译器转化为：
+      1 String::~String(ps);    //析构函数
+            其中析构函数：
+                ~String()
+                {
+                    delete[] m_data;
+                }
+      2 operator delete(ps);    //释放内存，内部调用free(ps)
+
+    4、new array 必须delete array，否则只会delete第一个元素的
+
+
+补充：
+    1、static
+        1、static变量：
+            必须要在类外定义（类内叫声明）
+        2、static函数
+            不包含this point、只能处理static变量
+            通过objec调用或者class name调用
+        3、单例模式
+            class A{
+            public:
+                static A& getInstance (){ return a}
+                setup() {...}
+            private:
+                A();
+                A(const A& rhs);
+                static A a;
+            };
+            A::getInstance().setup();
+            但这个没人使用这个单例，a仍然存在(在类加载的时候就存在了)
+        改进：
+            class A{
+            public:
+                static A& getInstance ()；
+                setup() {...}
+            private:
+                A();
+                A(const A& rhs);
+               
+            };
+            A& A::getInstance()
+            {
+                static A a;
+                return a;
+            }
+            只有用了这个单例才出现a
+
+    2、模板：
+        1、类模板 class template
+            template<typename T>
+            class Complex
+            {
+            public:
+                complex(T r=0, T i=0): re(r), im(i) { }
+            private:
+                T re, im;
+            }；
+            complex<double> c1(2.5, 1,5);   //T全部替换成double
+            comple<int> c2(2, 6);       //T全部替换成int
+        类模板用户指定
+
+        2、函数模板 function template
+            template <class T>
+            inline
+            const T& min(const T& a, const T&b)
+            {
+                return b < a ? b : a;
+            }
+            stone r1(2,3) r2(3,3), r3;
+            r3 = min(r1, r2);
+        函数模板，编译器会进行引数推导
+
+oop：
+    1、Composition
+        1、类的成员变量包含另一个类
+            这个被包含的类要有无参构造，否则要在构造函数中初始化这个类变量
+                class Complex
+                {
+                public:
+                    Complex() :cir( Circle(1))  //要初始化，写1也可以（函数转换）
+                    {
+                        cout << "comwucan" << endl;
+                        
+                    }
+                    ~Complex();
+                private:
+                    int a = 0;
+                    Circle cir;
+                };
+    
+    2、Delegation(委托).Composition by reference.
+        1、类的成员变量包含另一个类的指针变量
+            class Complex
+            {
+            public:
+                Complex();
+                ~Complex();
+            private:
+                Circle *cir;
+            };
+            该指针变量不自动调用构造函数，需要自己创建
+
+    3、Inheritance(继承)
+        1、不确定类会不会成为父类，最好都将dtor变成virtual，否则父类无法调用子类dtor
+        2、函数的继承是调用权
+        
+
+    当一个子类同时继承和包含其他类时，构造的顺序是由类的声明顺序和派生类列表中的顺序决定的
+    先构造父类，再构造成员
+
+
+
+
+
+
+
+
+
+
+
+
+零散知识点：
+1、inline(内联函数)
+    直接用函数体代码代替对函数的调用，这一过程成为函数体的内联展开
+
+    每一处内联函数的调用都要复制代码, 将使程序的总代码量增大，消耗更多的内存空间。以下情况不宜使用内联：
+        1）如果函数体内的代码比较长，使用内联将导致内存消耗代价较高。
+        2）如果函数体内出现循环，那么执行函数体内代码的时间要比函数调用的开销大。
+
+2、strcpy会复制'\0',所以在使用该函数的时候要预留结束符的空间（char* 虽然都可以copy上，但后续空间就不是自己申请的空间了，清空是就会报错，也有可能覆盖到其他数据）
+3、虚函数:
+    父类指向子类对象：
+        虚函数表中存储了实际类型对应的虚函数地址
+        当子类重写（override）父类的虚函数后，父类的虚函数表（vtable）会在运行时被修改
+        当子类重写了父类的虚函数，而在父类的其他函数中调用了这个虚函数时，会发生动态绑定，即运行时会调用子类的版本而不是父类的版本。
+        虚函数的调用是根据实际对象的类型来确定的。
+    需要注意的是，具体的实现可能因编译器、平台和编译选项等因素而有所不同。上述描述是一般情况下的行为。要深入了解，可能需要查看特定编译器的实现细节。
+
+    子类对象，调用父类函数，会把自身的指针传到函数中，当该函数需要继续调用虚函数时，调用this->函数
+    如果调用的函数中需要继续调用普通函数，则在编译器运行时就以确定好调用地址，故还是父类的函数。  
